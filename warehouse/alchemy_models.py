@@ -20,6 +20,9 @@ class ItemDB(Base):
     def __repr__(self):
         return f'Item: {self.item_name}'
 
+    def __str__(self):
+        return f"{self.item_name}"
+
 
 class CategoryDB(Base):
     __tablename__ = 'category'
@@ -31,6 +34,9 @@ class CategoryDB(Base):
 
     def __repr__(self):
         return f'Category: {self.category_name}'
+
+    def __str__(self):
+        return f"{self.category_name}"
 
 
 class ClientDB(Base):
@@ -45,6 +51,9 @@ class ClientDB(Base):
 
     def __repr__(self):
         return f'Client: {self.client_name}'
+
+    def __str__(self):
+        return f"{self.client_name}"
 
 
 class RentalDB(Base):
@@ -61,6 +70,9 @@ class RentalDB(Base):
 
     def __repr__(self):
         return f'Rental {self.rental_name}'
+
+    def __str__(self):
+        return f"{self.rental_name}"
 
 
 class ItemOnRentDB(Base):
@@ -95,4 +107,4 @@ class LostOnRentDB(Base):
 
 
 if __name__ == '__main__':
-    Base.metadata.create_all(engine)
+    pass

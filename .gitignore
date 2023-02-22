@@ -161,7 +161,7 @@ cython_debug/
 
 # ___________________________ MY IGNORES _____________________________
 test.py
-warehouse/DataBase/db_test.py
+
 warehouse/info
 data_adder.py
 

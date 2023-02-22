@@ -1,3 +1,8 @@
 QPushButton {
         background-color: #aacfa3;
+
+}
+
+#btn_clear_all {
+        background-color: #f60023;
 }
