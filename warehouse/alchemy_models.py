@@ -23,6 +23,10 @@ class ItemDB(Base):
     def __str__(self):
         return f"{self.item_name}"
 
+    @staticmethod
+    def get_name_parameter():
+        return 'item'
+
 
 class CategoryDB(Base):
     __tablename__ = 'category'
@@ -37,6 +41,10 @@ class CategoryDB(Base):
 
     def __str__(self):
         return f"{self.category_name}"
+
+    @staticmethod
+    def get_name_parameter():
+        return 'category'
 
 
 class ClientDB(Base):
@@ -54,6 +62,10 @@ class ClientDB(Base):
 
     def __str__(self):
         return f"{self.client_name}"
+
+    @staticmethod
+    def get_name_parameter():
+        return 'client'
 
 
 class RentalDB(Base):
@@ -73,6 +85,10 @@ class RentalDB(Base):
 
     def __str__(self):
         return f"{self.rental_name}"
+
+    @staticmethod
+    def get_name_parameter():
+        return 'rental'
 
 
 class ItemOnRentDB(Base):

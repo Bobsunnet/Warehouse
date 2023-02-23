@@ -3,7 +3,7 @@ from datetime import date
 
 from alchemy_models import Base
 
-from PyQt5.QtWidgets import QStyledItemDelegate
+from PyQt5.QtWidgets import QStyledItemDelegate, QTableView
 
 import alchemy_models
 
@@ -43,6 +43,35 @@ class BaseDelegate(QStyledItemDelegate):
             return str(value)
 
         return super().displayText(value, locale)
+
+
+class TableWidget(QTableView):
+    def __init__(self):
+        super().__init__()
+
+        self._filter_column = None
+
+    def setFilterColumn(self, f_column:int):
+        ''' CUSTOM METHOD
+        Hides "filtered"(mainly the last one) column from view
+        :param f_column: column index
+        :return:
+        '''
+        if self._filter_column and f_column != self._filter_column:
+            self.showColumn(self._filter_column)
+        self._filter_column = f_column
+        self.hideColumn(self._filter_column)
+
+    def clearFilterColumn(self):
+        '''
+        CUSTOM METHOD
+        clear's filter from view
+        :return:
+        '''
+        if self._filter_column:
+            self.showColumn(self._filter_column)
+        self._filter_column = None
+
 
 
 def main():

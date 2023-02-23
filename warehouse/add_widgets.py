@@ -1,21 +1,28 @@
+import sys
+
 from PyQt5 import QtWidgets
+from PyQt5.QtGui import QIntValidator
 
 from datetime import date
+
 import dbConnector as db
 
 
 class AddWindow(QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self, obj_name,  window_title):
         super().__init__()
         self.widgets = []
-        self.setWindowTitle('Add Window')
+        self.setObjectName(obj_name)
+        self.setWindowTitle(window_title)
 
         self.common_widget_setup()
 
     def common_widget_setup(self):
         self.lnedit_name = QtWidgets.QLineEdit()
-        self.lnedit_name.setPlaceholderText(f'Enter name')
+        self.lnedit_name.setPlaceholderText(f'*Enter {self.windowTitle().lower()} name')
+
         self.widgets.append(self.lnedit_name)
+        self.lnedit_name.setProperty('mandatoryField',True)
 
         self.btn_clear_all = QtWidgets.QPushButton('clear all')
         self.btn_clear_all.setObjectName('btn_clear_all')
@@ -44,12 +51,12 @@ class AddWindow(QtWidgets.QWidget):
 
 
 class ClientAddWindow(AddWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle('Client')
+    def __init__(self, obj_name,  window_title):
+        super().__init__(obj_name,  window_title)
         self.widgets_setup()
 
     def widgets_setup(self):
+
         self.lnedit_phone = QtWidgets.QLineEdit()
         self.lnedit_phone.setPlaceholderText('Enter phone number')
 
@@ -68,7 +75,6 @@ class ClientAddWindow(AddWindow):
 
     def btn_save_clicked(self):
         name = self.lnedit_name.text().strip().capitalize()
-        # todo валидация телефона и имейла
         phone = ''.join([digit for digit in self.lnedit_phone.text().strip() if digit.isdigit()])
         email = self.lnedit_email.text().strip()
 
@@ -78,8 +84,8 @@ class ClientAddWindow(AddWindow):
 
 class RentalAddWindow(AddWindow):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self,obj_name,  window_title):
+        super().__init__(obj_name,  window_title)
         self.widgets_setup()
 
     def widgets_setup(self):
@@ -108,9 +114,8 @@ class RentalAddWindow(AddWindow):
         self.layout_main.addLayout(self.layout_4)
 
         self.setLayout(self.layout_main)
+
 # _____________________________ functions _____________________________________
-
-
     def btn_save_clicked(self):
         rent_name = self.lnedit_name.text().strip().capitalize()
         rent_date = str(self.date_widget.date().toPyDate())
@@ -118,7 +123,7 @@ class RentalAddWindow(AddWindow):
         client_name = self.lnedit_client.text().strip().capitalize()
         client_id = None
         try:
-            client_id = db.get_client_model(client_name).client_id
+            client_id = db.get_obj_single(client_name).client_id
         except Exception as ex:
             print(f'client_id [ERROR]: {ex}')
 
@@ -130,8 +135,8 @@ class RentalAddWindow(AddWindow):
 
 
 class CategoryAddWindow(AddWindow):
-    def __init__(self):
-        super().__init__()
+    def __init__(self,obj_name,  window_title):
+        super().__init__(obj_name,  window_title)
         self.widgets_setup()
 
     def widgets_setup(self):
@@ -147,9 +152,49 @@ class CategoryAddWindow(AddWindow):
         print('added')
 
 
-def main():
-    pass
+class ItemAddWindow(AddWindow):
+    def __init__(self,obj_name,  window_title):
+        super().__init__(obj_name,  window_title)
+        self.widgets_setup()
+
+    def widgets_setup(self):
+        self.cbox_category = QtWidgets.QComboBox()
+
+        # ___________TESTING CODE___________
+        data_loader = db.DataLoader(db.CategoryDB)
+        self.objects_for_cbox = data_loader.load_all()
+        for i, el in enumerate(self.objects_for_cbox):
+            self.cbox_category.insertItem(i, el.category_name, el)
+
+        # ___________TESTING CODE___________
+
+        self.lnedit_amount = QtWidgets.QLineEdit()
+        self.lnedit_amount.setPlaceholderText('Enter amount')
+        self.lnedit_amount.setValidator(QIntValidator())
+        self.widgets.append(self.lnedit_amount)
+
+        self.layout_2.addWidget(self.cbox_category)
+        self.layout_2.addWidget(self.lnedit_amount)
+
+        self.layout_main.addLayout(self.layout_1)
+        self.layout_main.addLayout(self.layout_2)
+        self.layout_main.addLayout(self.layout_4)
+
+        self.setLayout(self.layout_main)
+
+    # _____________________________ functions _____________________________________
+    def btn_save_clicked(self):
+        name = self.lnedit_name.text().strip().capitalize()
+        cat_item = self.cbox_category.itemData(self.cbox_category.currentIndex())
+        amount = int(self.lnedit_amount.text().strip())
+
+        db.add_item(name, cat_item.category_id,amount)
+        print('added')
 
 
 if __name__ == '__main__':
-    pass
+    app = QtWidgets.QApplication(sys.argv)
+    window = ItemAddWindow('Item')
+    window.show()
+    sys.exit(app.exec_())
+

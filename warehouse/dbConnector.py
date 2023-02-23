@@ -1,6 +1,5 @@
+import sys
 from datetime import date
-
-from PyQt5.QtCore import QDate
 
 from engine_session import *
 from alchemy_models import *
@@ -31,48 +30,19 @@ def data_getter_deco(func):
 
 
 @data_getter_deco
-def get_item_model(item: int | str):
-    if type(item) == str:
-        return session.query(ItemDB).filter(ItemDB.item_name == item).first()
-    elif type(item) == int:
-        return session.query(ItemDB).filter(ItemDB.item_id == item).first()
-    else:
-        return
-
-
-@data_getter_deco
-def get_rental_model(rental: int | str):
-    if type(rental) == str:
-        return session.query(RentalDB).filter(RentalDB.rental_name == rental).first()
-    elif type(rental) == int:
-        return session.query(RentalDB).filter(RentalDB.rental_id == rental).first()
-    else:
-        return
-
-
-@data_getter_deco
-def get_rental_all():
-    return session.query(RentalDB).all()
-
-
-@data_getter_deco
-def get_client_model(client: int | str):
+def get_obj_single(obj: Base, parameter: int | str):
     '''
 
-    :param client: ID: int or Name: str
+    :param parameter: ID: int or Name: str
     :return: ORM object
     '''
-    if type(client) == str:
-        return session.query(ClientDB).filter(ClientDB.client_name == client).first()
-    elif type(client) == int:
-        return session.query(ClientDB).filter(ClientDB.client_id == client).first()
+    name_parameter = obj.get_name_parameter()
+    if type(parameter) == str:
+        return session.query(obj).filter(getattr(obj, f'{name_parameter}_name') == parameter).first()
+    elif type(parameter) == int:
+        return session.query(obj).filter(getattr(obj, f'{name_parameter}_id') == parameter).first()
     else:
         return
-
-
-@data_getter_deco
-def get_client_all() -> list:
-    return session.query(ClientDB).all()
 
 
 @data_getter_deco
@@ -86,8 +56,8 @@ def get_category_model(category: int | str):
 
 
 @data_getter_deco
-def get_category_all() -> list:
-    return session.query(CategoryDB).all()
+def get_object_all(obj: Base):
+    return session.query(obj).all()
 
 
 def add_category(cat_name):
@@ -130,7 +100,7 @@ def add_items_lost(item_id, rental_id, amount, status=True):
 
 
 # ********************************* SOME TEST FUNC **************************************
-def convert_to_table(obj_list: list):
+def _convert_to_table(obj_list: list):
     resulting_table = []
     for el in obj_list:
         resulting_table.append(tuple(el.__dict__.items())[1:])
@@ -141,11 +111,34 @@ def get_full_table(table_object: Base, tupled=False):
     items = session.query(table_object).all()
     if not tupled:
         return items
-    return convert_to_table(items)
+    return _convert_to_table(items)
+# ********************************** --------- ************************************************
+
+
+class DataLoader:
+    '''
+    Class for load interaction with DB through the SQLalchemy classes
+    '''
+    def __init__(self, orm_class: Base):
+        self.orm_class = orm_class
+
+    def load_single(self, name: int | str):
+        return get_obj_single(self.orm_class, name)
+
+    def load_all(self):
+        return get_object_all(self.orm_class)
+
+    def load_names(self):
+        parameter = self.orm_class.get_name_parameter()
+
+        return [getattr(obj, f'{parameter}_name') for obj in self.load_all()]
+
+    def __repr__(self):
+        return f'DataLoader for: {self.orm_class}'
 
 
 if __name__ == '__main__':
-    # rentals = get_rental_all()
-    # table = [[rent, rent.Client, rent.rental_date, rent.details, rent.rental_status] for rent in rentals]
-    add_rental('test')
+    data_l = DataLoader(ItemDB)
+    res = data_l.load_all()
+    print(sys.getsizeof(res))
     pass
