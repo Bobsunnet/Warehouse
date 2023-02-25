@@ -1,15 +1,16 @@
 import sys
 import os
 
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import QSize, QSortFilterProxyModel, Qt
+from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtCore import QSize, QSortFilterProxyModel, Qt, QModelIndex, QRect
+from PyQt5.QtGui import QIcon
 
 from TableInterface import TableModel, BaseDelegate, TableWidget
 import dbConnector as db
 import add_widgets
-from find_widgets import FindWidget
+from find_widgets import FindWidget, DataCache, DataHandler
 
-# TAB_NAMES = ['Warehouse', 'Rental', 'Client', 'Item', 'Category']
+DEBUG = True
 HEADERS_CLIENTS = ['Name', 'Phone', 'Email', '_filter']
 HEADERS_CATS = ['Category', '_filter']
 HEADERS_RENTALS = ['Event/Rent', 'Client', 'Date', 'Descr', 'Status', '_filter']
@@ -25,10 +26,12 @@ with open(STYLES_PATH, 'r') as file:
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
+        self.data_handler = DataHandler()
         self.add_rental_window = None
         self.add_client_window = None
 
         self.active_tab = None
+        self.active_cell = None
 
         self.warehouse_widget_setup()
         self.rental_widget_setup()
@@ -67,6 +70,9 @@ class MainWindow(QtWidgets.QMainWindow):
         act_add_item.setObjectName('act_add_item')
         act_add_item.triggered.connect(self.act_item_add_clicked)
 
+        act_debug_versatile = QtWidgets.QAction(QIcon('static/images/bug_black.png'),'Debug', self)
+        act_debug_versatile.triggered.connect(self.debug_versatile)
+
         toolbar.addAction(act_add_client)
         toolbar.addSeparator()
         toolbar.addAction(act_add_rental)
@@ -74,6 +80,8 @@ class MainWindow(QtWidgets.QMainWindow):
         toolbar.addAction(act_add_category)
         toolbar.addSeparator()
         toolbar.addAction(act_add_item)
+        toolbar.addSeparator()
+        toolbar.addAction(act_debug_versatile)
 
         widgets_list = [self.warehouse_widget, self.rental_widget, self.client_widget, self.item_widget,
                         self.category_widget]
@@ -84,11 +92,12 @@ class MainWindow(QtWidgets.QMainWindow):
     def layout_setup(self):
         main_layout = QtWidgets.QVBoxLayout()
 
-        bot_layout = QtWidgets.QVBoxLayout()
-        bot_layout.addWidget(self.table_widget)
-
-        main_layout.addWidget(self.tab_window)
-        main_layout.addLayout(bot_layout)
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        splitter.addWidget(self.tab_window)
+        splitter.addWidget(self.table_widget)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([125, 150])
+        main_layout.addWidget(splitter)
 
         main_block_widget = QtWidgets.QWidget()
         main_block_widget.setObjectName('main_block_widget')
@@ -104,6 +113,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def rental_widget_setup(self):
         self.rental_widget = FindWidget('rental_widget','Rental', db.RentalDB)
+        self.rental_widget.headers = HEADERS_RENTALS
 
         self.rental_widget.checkbox_status = QtWidgets.QCheckBox('Show Ended')
         self.rental_widget.layout_1.addWidget(self.rental_widget.checkbox_status)
@@ -117,6 +127,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def client_widget_setup(self):
         self.client_widget = FindWidget('client_widget', 'Client', db.ClientDB)
+        self.client_widget.headers = HEADERS_CLIENTS
 
         self.client_widget.btn_add_object.clicked.connect(self.act_client_add_clicked)
         self.client_widget.btn_edit_object.clicked.connect(self.btn_edit_client_clicked)
@@ -126,6 +137,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def item_widget_setup(self):
         self.item_widget = FindWidget('item_widget', 'Items', db.ItemDB)
+        self.item_widget.headers = HEADERS_ITEMS
 
         self.item_widget.btn_add_object.clicked.connect(self.act_item_add_clicked)
         self.item_widget.btn_edit_object.clicked.connect(self.btn_edit_items_clicked)
@@ -135,6 +147,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def category_widget_setup(self):
         self.category_widget = FindWidget('category_widget', 'Category', db.CategoryDB)
+        self.category_widget.headers = HEADERS_CATS
 
         self.category_widget.btn_add_object.clicked.connect(self.act_category_add_clicked)
         self.category_widget.btn_edit_object.clicked.connect(self.btn_edit_category_clicked)
@@ -143,46 +156,56 @@ class MainWindow(QtWidgets.QMainWindow):
         self.add_category_window = add_widgets.CategoryAddWindow('add_category_window','Category')
 
 # ************************************************* LOGIC *********************************************************
+    def debug_versatile(self):
+        # self.action_show_full_table()
+        print('Debug is not connected now')
+
     # *************************** EVENTS/ACTIONS **************************************
     def tab_changed(self, i):
         self.active_tab = self.tab_window.currentWidget()
+        # if i != 0:
+        #     self.action_show_full_table()
 
     def checkbox_status_clicked(self):
+        # TODO переделать логику чтобы не быть привязаным к отдельной функции
         self.action_show_all_rentals()
+        self.hide_ended_events()
 
 
     def btn_show_full_category_clicked(self):
-        self.action_show_all_category()
+        self.action_show_full_table(self.make_table_category)
 
     def btn_edit_category_clicked(self):
-        print(self.category_widget.data_cache.get_active_sell())
+        res = self.category_widget.data_cache.get_active_sell()
+        print(type(res), res)
 
     def act_category_add_clicked(self):
         self.add_category_window.show()
 
 
     def btn_show_full_clients_clicked(self):
-        self.action_show_all_clients()
+        self.action_show_full_table(self.make_table_clients)
 
     def btn_edit_client_clicked(self):
-        print(self.client_widget.data_cache.get_active_sell())
+        print(f'editing: {self.client_widget.data_cache.get_active_sell()}')
 
     def act_client_add_clicked(self):
         self.add_client_window.show()
 
 
     def btn_show_full_rental_clicked(self):
-        self.action_show_all_rentals()
+        self.action_show_full_table(self.make_table_rentals)
 
     def btn_edit_rental_clicked(self):
-        print(self.rental_widget.data_cache.get_active_sell())
+        res = self.rental_widget.data_cache.get_active_sell()
+        print(type(res), res)
 
     def act_rental_add_clicked(self):
         self.add_rental_window.show()
 
 
     def btn_show_full_items_clicked(self):
-        self.action_show_all_items()
+        self.action_show_full_table(self.make_table_items)
 
     def btn_edit_items_clicked(self):
         print(self.item_widget.data_cache.get_active_sell())
@@ -191,16 +214,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.add_item_window.show()
 
     # ***************************** ACTIONS **************************************
-    def action_show_all_clients(self):
-        widget = self.client_widget
-        if not widget.data_cache.get_cache_list():
+    def action_show_full_table(self, table_convert_func):
+        widget = self.tab_window.currentWidget()
+        if not widget.get_active_model():  # Здесь он ругается на вкладку Warehouse так как это QWidget, а не FindWidget
             data = widget.data_loader.load_all()
-            widget.data_cache.set_cache_list(data)
-            print('connection')
-        model = self.make_model(widget.data_cache.get_cache_list(), HEADERS_CLIENTS, self.make_table_clients,
+            print('Connection USED')
+            model = self.make_model(data, widget.headers, table_convert_func,
                                 widget.lnedit_search)
-        self.draw_table(model, widget)
+            widget.set_active_model(model)
+        self.draw_table(widget.get_active_model(), widget)
 
+    # ОСТАТОК ВРЕМЕННЫЙ
     def action_show_all_rentals(self):
         widget = self.rental_widget
         if not widget.data_cache.get_cache_list():
@@ -208,26 +232,6 @@ class MainWindow(QtWidgets.QMainWindow):
             widget.data_cache.set_cache_list(data)
             print('connection')
         model = self.make_model(widget.data_cache.get_cache_list(), HEADERS_RENTALS, self.make_table_rentals,
-                                widget.lnedit_search)
-        self.draw_table(model, widget)
-
-    def action_show_all_category(self):
-        widget = self.category_widget
-        if not widget.data_cache.get_cache_list():
-            data = widget.data_loader.load_all()
-            widget.data_cache.set_cache_list(data)
-            print('connection')
-        model = self.make_model(widget.data_cache.get_cache_list(), HEADERS_CATS, self.make_table_category,
-                                widget.lnedit_search)
-        self.draw_table(model, widget)
-
-    def action_show_all_items(self):
-        widget = self.item_widget
-        if not widget.data_cache.get_cache_list():
-            data = widget.data_loader.load_all()
-            widget.data_cache.set_cache_list(data)
-            print('connection')
-        model = self.make_model(widget.data_cache.get_cache_list(), HEADERS_ITEMS, self.make_table_items,
                                 widget.lnedit_search)
         self.draw_table(model, widget)
 
@@ -277,16 +281,26 @@ class MainWindow(QtWidgets.QMainWindow):
         table = [[client, client.phone_number, client.email, client.client_name] for client in clients]
         return table
 
+    def hide_ended_events(self):
+        print('HIDING ENDED EVENTS')
+
     def draw_table(self, model, widget):
         self.table_widget.setModel(model)
         self.table_widget.setItemDelegate(BaseDelegate())
         self.table_widget.selectionModel().currentChanged.connect(lambda x: widget.data_cache.set_active_sell(x.data()))
+        self.table_widget.selectionModel().currentChanged.connect(self.cell_highlighted)
 
         self.table_widget.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-        self.table_widget.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        # self.table_widget.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
         filtered_column = model.columnCount()-1
         self.table_widget.setFilterColumn(filtered_column)
+
+    def cell_highlighted(self, current, previous):
+        current_row, current_col = current.row(), current.column()
+        model = self.table_widget.model()
+        print(model.itemData(current).get(0))
+        # print(current_row, current_col)
 
 
 if __name__ == '__main__':

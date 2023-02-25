@@ -1,10 +1,14 @@
-import sys
+import sys, os
 
 from PyQt5 import QtWidgets
+from PyQt5.QtGui import QIcon, QPixmap
 
-from OperationClasses import DataCache
+from OperationClasses import DataCache, DataHandler
 
 import dbConnector as db
+
+BASEDIR = os.path.dirname(__file__)
+IMAGES_PATH = os.path.join(BASEDIR, 'static/images')
 
 class FindWidget(QtWidgets.QWidget):
     '''
@@ -22,6 +26,7 @@ class FindWidget(QtWidgets.QWidget):
         self.setObjectName(obj_name)
         self.setWindowTitle(window_title)
         self.setProperty('findWidget', True)
+        # todo нужно сделать отдельный класс для дата кеша и лоадера
         self.data_cache = DataCache()
         self.data_loader = db.DataLoader(object_class)
 
@@ -31,13 +36,13 @@ class FindWidget(QtWidgets.QWidget):
         self.lnedit_search = QtWidgets.QLineEdit()
         self.lnedit_search.setPlaceholderText(f'Enter {self.windowTitle().lower()} name')
 
-        self.btn_show_full_table = QtWidgets.QPushButton('Show all')
+        self.btn_show_full_table = QtWidgets.QPushButton(QIcon(QPixmap('static/images/table-grid.png')), ' Show all')
         self.btn_show_full_table.setObjectName('btn_show_full_table')
 
-        self.btn_edit_object = QtWidgets.QPushButton('Edit')
+        self.btn_edit_object = QtWidgets.QPushButton(QIcon(QPixmap('static/images/edit.png')), ' Edit')
         self.btn_edit_object.setObjectName('btn_edit_object')
 
-        self.btn_add_object = QtWidgets.QPushButton('Add')
+        self.btn_add_object = QtWidgets.QPushButton(QIcon(QPixmap('static/images/add.png')), ' Add')
         self.btn_add_object.setObjectName('btn_add_object')
 
         self.layout_1 = QtWidgets.QHBoxLayout()
@@ -53,6 +58,21 @@ class FindWidget(QtWidgets.QWidget):
         self.layout_main.addLayout(self.layout_2)
 
         self.setLayout(self.layout_main)
+
+    def get_active_model(self):
+        return self.data_cache.get_active_model()
+
+    def set_active_model(self, model):
+        self.data_cache.set_active_model(model)
+
+    def get_cache_list(self):
+        return self.data_cache.get_cache_list()
+
+    def set_cache_list(self, value):
+        self.data_cache.set_cache_list(value)
+
+
+
 
 
 if __name__ == '__main__':

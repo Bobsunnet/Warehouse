@@ -5,8 +5,6 @@ from alchemy_models import Base
 
 from PyQt5.QtWidgets import QStyledItemDelegate, QTableView
 
-import alchemy_models
-
 from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex
 
 
@@ -35,6 +33,18 @@ class TableModel(QAbstractTableModel):
         if orientation == Qt.Vertical and role == Qt.DisplayRole:
             return str(col+1)
         return
+
+    def setData(self, index: QModelIndex, value: typing.Any, role: int = Qt.EditRole) -> bool:
+        if index.isValid() and role == Qt.EditRole:
+            #if no value was entered
+            if not value:
+                return False
+            self._data[index.row()][index.column()] = value
+            self.dataChanged.emit(index, index)
+            return True
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+        return super().flags(index) | Qt.ItemIsEditable
 
 
 class BaseDelegate(QStyledItemDelegate):

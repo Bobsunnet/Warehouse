@@ -38,10 +38,27 @@ QLineEdit {
     selection-background-color: rgb(30, 30, 114);
     height: 24px;
     font-size: 16px;
-
 }
 
 *[mandatoryField="true"] {
     background-color: #def7cd;
 }
 
+QTabWidget:pane {
+  border: 1px solid lightgray;
+  top:-1px;
+  background: rgb(245, 248, 250);
+  padding: 10px;
+}
+
+QTabBar::tab {
+  background: rgb(230, 230, 230);
+  border: 1px solid lightgray;
+  padding: 5px;
+
+}
+
+QTabBar::tab:selected {
+  background: rgb(245, 245, 245);
+  margin-bottom: -4px;
+}
