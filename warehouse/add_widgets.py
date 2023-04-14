@@ -9,15 +9,16 @@ import dbConnector as db
 
 
 class AddWindow(QtWidgets.QWidget):
-    def __init__(self, obj_name,  window_title):
+    def __init__(self, parent, obj_name,  window_title):
         super().__init__()
         self.widgets = []
+        self.parent = parent
         self.setObjectName(obj_name)
         self.setWindowTitle(window_title)
 
-        self.common_widget_setup()
+        self.general_ui_setup()
 
-    def common_widget_setup(self):
+    def general_ui_setup(self):
         self.lnedit_name = QtWidgets.QLineEdit()
         self.lnedit_name.setPlaceholderText(f'*Enter {self.windowTitle().lower()} name')
 
@@ -25,7 +26,7 @@ class AddWindow(QtWidgets.QWidget):
         self.lnedit_name.setProperty('mandatoryField',True)
 
         self.btn_clear_all = QtWidgets.QPushButton('clear all')
-        self.btn_clear_all.setObjectName('btn_clear_all')
+        self.btn_clear_all.setObjectName('btn_reset')
         self.btn_clear_all.clicked.connect(self.btn_clear_all_clicked)
         self.btn_save = QtWidgets.QPushButton('Save')
         self.btn_save.clicked.connect(self.btn_save_clicked)
@@ -51,8 +52,8 @@ class AddWindow(QtWidgets.QWidget):
 
 
 class ClientAddWindow(AddWindow):
-    def __init__(self, obj_name,  window_title):
-        super().__init__(obj_name,  window_title)
+    def __init__(self, parent, obj_name,  window_title):
+        super().__init__(parent,obj_name,  window_title)
         self.widgets_setup()
 
     def widgets_setup(self):
@@ -84,8 +85,8 @@ class ClientAddWindow(AddWindow):
 
 class RentalAddWindow(AddWindow):
 
-    def __init__(self,obj_name,  window_title):
-        super().__init__(obj_name,  window_title)
+    def __init__(self,parent,obj_name,  window_title):
+        super().__init__(parent,obj_name,  window_title)
         self.widgets_setup()
 
     def widgets_setup(self):
@@ -135,8 +136,8 @@ class RentalAddWindow(AddWindow):
 
 
 class CategoryAddWindow(AddWindow):
-    def __init__(self,obj_name,  window_title):
-        super().__init__(obj_name,  window_title)
+    def __init__(self,parent,obj_name,  window_title):
+        super().__init__(parent,obj_name,  window_title)
         self.widgets_setup()
 
     def widgets_setup(self):
@@ -153,8 +154,8 @@ class CategoryAddWindow(AddWindow):
 
 
 class ItemAddWindow(AddWindow):
-    def __init__(self,obj_name,  window_title):
-        super().__init__(obj_name,  window_title)
+    def __init__(self,parent,obj_name, window_title):
+        super().__init__(parent,obj_name, window_title)
         self.widgets_setup()
 
     def widgets_setup(self):

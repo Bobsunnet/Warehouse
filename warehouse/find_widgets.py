@@ -3,34 +3,37 @@ import sys, os
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QIcon, QPixmap
 
-from OperationClasses import DataCache, DataHandler
+from OperationClasses import ModelCache
 
 import dbConnector as db
 
 BASEDIR = os.path.dirname(__file__)
 IMAGES_PATH = os.path.join(BASEDIR, 'static/images')
 
-class FindWidget(QtWidgets.QWidget):
-    '''
-    All events connections must be release in sub-classes!!!
+
+class FindWidget(QtWidgets.QWidget, ModelCache):
+    """
+    All events connections must be released in sub-classes!!!
     lnedit_search : Finder
     btn_show_full_table : full table show
     btn_edit_object : editing button
     btn_add_object: adding proper object
     layout_1: lnedit
     layout_2: buttons
-    '''
+    """
 
-    def __init__(self, obj_name, window_title, object_class):
+    def __init__(self, obj_name:str, table_name:str, headers):
         super().__init__()
-        self.setObjectName(obj_name)
-        self.setWindowTitle(window_title)
-        self.setProperty('findWidget', True)
-        # todo нужно сделать отдельный класс для дата кеша и лоадера
-        self.data_cache = DataCache()
-        self.data_loader = db.DataLoader(object_class)
-
+        self.db_table_name = table_name
+        self.headers = headers
+        # self.model_cache = ModelCache(self)
         self.common_widgets_setup()
+        self.init_ui(obj_name)
+
+    def init_ui(self, obj_name):
+        self.setObjectName(obj_name)
+        self.setWindowTitle(self.db_table_name.capitalize())
+        self.setProperty('findWidget', True)
 
     def common_widgets_setup(self):
         self.lnedit_search = QtWidgets.QLineEdit()
@@ -42,6 +45,9 @@ class FindWidget(QtWidgets.QWidget):
         self.btn_edit_object = QtWidgets.QPushButton(QIcon(QPixmap('static/images/edit.png')), ' Edit')
         self.btn_edit_object.setObjectName('btn_edit_object')
 
+        self.btn_delete_row = QtWidgets.QPushButton('Delete')
+        self.btn_delete_row.setObjectName('btn_delete_row')
+
         self.btn_add_object = QtWidgets.QPushButton(QIcon(QPixmap('static/images/add.png')), ' Add')
         self.btn_add_object.setObjectName('btn_add_object')
 
@@ -51,6 +57,7 @@ class FindWidget(QtWidgets.QWidget):
         self.layout_2 = QtWidgets.QHBoxLayout()
         self.layout_2.addWidget(self.btn_show_full_table)
         self.layout_2.addWidget(self.btn_edit_object)
+        self.layout_2.addWidget(self.btn_delete_row)
         self.layout_2.addWidget(self.btn_add_object)
 
         self.layout_main = QtWidgets.QVBoxLayout()
@@ -59,20 +66,8 @@ class FindWidget(QtWidgets.QWidget):
 
         self.setLayout(self.layout_main)
 
-    def get_active_model(self):
-        return self.data_cache.get_active_model()
-
-    def set_active_model(self, model):
-        self.data_cache.set_active_model(model)
-
-    def get_cache_list(self):
-        return self.data_cache.get_cache_list()
-
-    def set_cache_list(self, value):
-        self.data_cache.set_cache_list(value)
-
-
-
+    def get_db_table_name(self):
+        return self.db_table_name
 
 
 if __name__ == '__main__':

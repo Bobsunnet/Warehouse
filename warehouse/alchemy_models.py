@@ -16,12 +16,13 @@ class ItemDB(Base):
     amount = Column(Integer)
 
     Category = relationship("CategoryDB", back_populates='Item')
+    # rentals = relationship("RentalDB", back_populates='items')
 
     def __repr__(self):
         return f'Item: {self.item_name}'
 
     def __str__(self):
-        return f"{self.item_name}"
+        return f"[ORM] {self.item_name}"
 
     @staticmethod
     def get_name_parameter():
@@ -40,7 +41,7 @@ class CategoryDB(Base):
         return f'Category: {self.category_name}'
 
     def __str__(self):
-        return f"{self.category_name}"
+        return f"[ORM] {self.category_name}"
 
     @staticmethod
     def get_name_parameter():
@@ -61,7 +62,7 @@ class ClientDB(Base):
         return f'Client: {self.client_name}'
 
     def __str__(self):
-        return f"{self.client_name}"
+        return f"[ORM] {self.client_name}"
 
     @staticmethod
     def get_name_parameter():
@@ -79,12 +80,13 @@ class RentalDB(Base):
     rental_status = Column(Boolean)
 
     Client = relationship("ClientDB", back_populates='Rental')
+    items = relationship("ItemOnRentDB", back_populates='Rental')
 
     def __repr__(self):
         return f'Rental {self.rental_name}'
 
     def __str__(self):
-        return f"{self.rental_name}"
+        return f"[ORM] {self.rental_name}"
 
     @staticmethod
     def get_name_parameter():

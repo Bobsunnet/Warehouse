@@ -4,12 +4,10 @@ from datetime import date
 from alchemy_models import Base
 
 from PyQt5.QtWidgets import QStyledItemDelegate, QTableView
-
 from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex
 
 
 class TableModel(QAbstractTableModel):
-
     def __init__(self, data, headers:list = None):
         super().__init__()
         self._headers = headers
@@ -19,7 +17,10 @@ class TableModel(QAbstractTableModel):
         return len(self._data)
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
-        return len(self._data[0])
+        try:
+            return len(self._data[0])
+        except Exception:
+            return 0
 
     def data(self, index: QModelIndex, role: int = ...) -> typing.Any:
         if role == Qt.DisplayRole:
@@ -55,7 +56,7 @@ class BaseDelegate(QStyledItemDelegate):
         return super().displayText(value, locale)
 
 
-class TableWidget(QTableView):
+class MyTableView(QTableView):
     def __init__(self):
         super().__init__()
 
@@ -81,7 +82,6 @@ class TableWidget(QTableView):
         if self._filter_column:
             self.showColumn(self._filter_column)
         self._filter_column = None
-
 
 
 def main():

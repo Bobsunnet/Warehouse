@@ -1,6 +1,8 @@
 import sys
 from datetime import date
 
+from PyQt5.QtCore import QThread, pyqtSignal
+
 from engine_session import *
 from alchemy_models import *
 
@@ -31,6 +33,7 @@ def data_getter_deco(func):
 
 @data_getter_deco
 def get_obj_single(obj: Base, parameter: int | str):
+    #TODO Сделать через перегрузку функций или матч кейз
     '''
 
     :param parameter: ID: int or Name: str
@@ -115,30 +118,35 @@ def get_full_table(table_object: Base, tupled=False):
 # ********************************** --------- ************************************************
 
 
-class DataLoader:
-    '''
-    Class for load interaction with DB through the SQLalchemy classes
-    '''
+class DataLoader(QThread):
+    """ Class for load interaction with DB through the SQLalchemy classes
+        Use different Thread """
+
+    downloading_finished = pyqtSignal()
+
     def __init__(self, orm_class: Base):
-        self.orm_class = orm_class
+        super().__init__()
+        self._orm_class = orm_class
+        self._db_table_name = self._orm_class.get_name_parameter()  # сохраняем имя таблицы
 
     def load_single(self, name: int | str):
-        return get_obj_single(self.orm_class, name)
+        """ загружает обьект из БД по имени"""
+        return get_obj_single(self._orm_class, name)
 
-    def load_all(self):
-        return get_object_all(self.orm_class)
+    def load_all(self) -> list:
+        """ загружает все обьекты из таблицы и возвращает список """
+        return get_object_all(self._orm_class)
 
     def load_names(self):
-        parameter = self.orm_class.get_name_parameter()
-
-        return [getattr(obj, f'{parameter}_name') for obj in self.load_all()]
+        """ возвращает список имен из БД"""
+        return [getattr(obj, f'{self._db_table_name}_name') for obj in self.load_all()]
 
     def __repr__(self):
-        return f'DataLoader for: {self.orm_class}'
+        return f'DataLoader for: {self._orm_class}'
 
 
 if __name__ == '__main__':
     data_l = DataLoader(ItemDB)
     res = data_l.load_all()
-    print(sys.getsizeof(res))
+    print(type(res[0]))
     pass

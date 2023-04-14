@@ -18,15 +18,28 @@ QPushButton:pressed {
     border-style: inset;
 }
 
-#btn_clear_all {
+#btn_reset {
     background-color: #f60025;
 }
 
-#btn_clear_all:hover {
+#btn_reset:hover {
     background-color: #df0020;
 }
 
-#btn_clear_all:pressed {
+#btn_reset:pressed {
+    background-color: #c80012;
+    border-style: inset;
+}
+
+#btn_delete_row {
+    background-color: #f60025
+}
+
+#btn_delete_row:hover {
+    background-color: #e63025;
+}
+
+#btn_delete_row:pressed {
     background-color: #c80012;
     border-style: inset;
 }
