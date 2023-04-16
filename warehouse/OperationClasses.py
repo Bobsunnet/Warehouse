@@ -1,8 +1,10 @@
 from typing import Any, Union
-from PyQt5.QtWidgets import QTableView, QWidget
+from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import QModelIndex
 
 import dbConnector as db
+from alchemy_models import RentalDB, ItemDB
+from constants import *
 
 
 class ModelCache:
@@ -20,7 +22,6 @@ class ModelCache:
     def add_changed_cell(self, changed_data: Any):
         if changed_data != self._previous_cell_data:
             self.changed_cells.append((self._previous_cell_index, self._previous_cell_data, changed_data))
-            print(self.changed_cells)
 
     def _set_previous_cell_data(self):
         if self._active_cell_data is not None:
@@ -50,7 +51,22 @@ class ModelCache:
     def get_active_cell_index(self):
         return self._active_cell_index
 
+    def get_active_orm_object(self):
+        """ Возвращает ОРМ обьект активной клетки """
+        row = self.get_active_cell_index().row()
+        model = self.get_active_model()
+        col = model.columnCount() - 1
+        orm_obj = model.data(model.index(row, col))
+        return orm_obj
+
+    def get_orm_object_from_row(self, row):
+        model = self.get_active_model()
+        col = model.columnCount() - 1
+        orm_obj = model.data(model.index(row, col))
+        return orm_obj
+
     def undo_change(self):
+        """ Отменяет последнее изменение в модели """
         if len(self.changed_cells) > 0:
             last_change = self.changed_cells.pop()
             index, old_value = last_change[0:2]
@@ -62,6 +78,18 @@ class ModelCache:
         for changes in self.changed_cells[::-1]:
             unique_changes.setdefault(changes[0], changes[2])
         return unique_changes
+
+    def save_changes(self):
+        changes_list: dict = self._get_unique_changes()
+        for index, value in changes_list.items():
+            col = index.column()
+            orm_obj: ItemDB = self.get_orm_object_from_row(index.row())
+
+            setattr(orm_obj, ORM_OBJ_COL_NAMES.get(self.parent.get_db_table_name())[col], value)
+            db.session.commit()
+
+    def reset_changed_cells(self):
+        self.changed_cells.clear()
 
 
 class SearchCacheCategories:  # todo сделать без этого класса. Через общий DbCache class

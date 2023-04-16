@@ -1,7 +1,7 @@
 import sys, os
 
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtGui import QIcon, QPixmap, QKeySequence
 
 from OperationClasses import ModelCache
 
@@ -11,7 +11,7 @@ BASEDIR = os.path.dirname(__file__)
 IMAGES_PATH = os.path.join(BASEDIR, 'static/images')
 
 
-class FindWidget(QtWidgets.QWidget, ModelCache):
+class FindWidget(QtWidgets.QWidget):
     """
     All events connections must be released in sub-classes!!!
     lnedit_search : Finder
@@ -26,7 +26,7 @@ class FindWidget(QtWidgets.QWidget, ModelCache):
         super().__init__()
         self.db_table_name = table_name
         self.headers = headers
-        # self.model_cache = ModelCache(self)
+        self.model_cache = ModelCache(self)
         self.common_widgets_setup()
         self.init_ui(obj_name)
 

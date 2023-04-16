@@ -5,21 +5,17 @@ import psycopg2.errors as psyc_ex
 from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QSize, QSortFilterProxyModel, Qt
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QKeySequence
 
 from alchemy_models import RentalDB
 from TableInterface import TableModel, BaseDelegate, MyTableView
 import dbConnector as db
 import add_widgets
 from find_widgets import FindWidget
-from OperationClasses import SearchCacheCategories, DbCache
+from OperationClasses import SearchCacheCategories, DbCache, ModelCache
 
+from constants import *
 
-DEBUG = True
-HEADERS_CLIENTS = ['Name', 'Phone', 'Email', '_filter']
-HEADERS_CATS = ['Category', '_filter']
-HEADERS_RENTALS = ['Event/Rent', 'Client', 'Date', 'Descr', 'Status', '_filter']
-HEADERS_ITEMS = ['Item', 'Category', 'Amount', '_filter']
 
 BASEDIR = os.path.dirname(__file__)
 STYLES_PATH = os.path.join(BASEDIR, 'static/style/styles.css')
@@ -28,7 +24,7 @@ with open(STYLES_PATH, 'r') as file:
     style = file.read()
 
 
-class DetailedTableWidget(QWidget, SearchCacheCategories):
+class DetailedRentalWidget(QWidget, SearchCacheCategories):
     # виджет для просмотра подробных сведений об объекте(Rental)
     def __init__(self, parent):
         super().__init__()
@@ -36,9 +32,12 @@ class DetailedTableWidget(QWidget, SearchCacheCategories):
         self.parent: QtWidgets.QWidget = parent
         self.rental_object: RentalDB | None = None
         self.load_categories()
+        self.model_cache = ModelCache
 
         self.init_ui()
         self.setup_ui()
+
+        self.table_widget.horizontalHeader().sectionDoubleClicked.connect(self.parent.sorting_double_clicked)
 
     def init_ui(self):
         self.setMinimumSize(600,480)
@@ -100,7 +99,6 @@ class DetailedTableWidget(QWidget, SearchCacheCategories):
         self.cbox_item.clear()
         self.cbox_item.addItems(self.cats_items[category_name])
 
-
     @staticmethod
     def _create_items_model(rental):
         """ Создание модели для таблицы из обьекта ОРМ """
@@ -113,11 +111,7 @@ class DetailedTableWidget(QWidget, SearchCacheCategories):
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
-        self.active_tab = None
-        self.active_cell = None
-
-        self.items_loader = db.DataLoader(db.ItemDB)
-        self.items_loader.load_names()
+        self.active_widget = None
 
         self.warehouse_widget_setup()
         self.rental_widget_setup()
@@ -126,11 +120,26 @@ class MainWindow(QtWidgets.QMainWindow):
         self.category_widget_setup()
         self.mainWindow_setup()
         self.layout_setup()
+        self.actions_menu_setup()
 
         # %%%%%%%%%%%%%%%%%%%%%%%%% TEST %%%%%%%%%%%%%%%%%%%%%%
         self.db_cache = DbCache()
         self.db_cache.load_all_from_db()
-        print(self.db_cache.cache_dict.__sizeof__())
+
+    def actions_menu_setup(self):
+        """ Подключение менюбара и действий(QAction) """
+        self.action_undo_changes = QtWidgets.QAction('Undo', self)  #
+        self.action_undo_changes.triggered.connect(self.undo_changes)
+        self.action_undo_changes.setShortcut(QKeySequence('Ctrl+Z'))
+
+        self.action_save_changes = QtWidgets.QAction('Save', self)  #
+        self.action_save_changes.triggered.connect(self.save_changes)
+        self.action_save_changes.setShortcut(QKeySequence('Ctrl+S'))
+
+        self.menu = self.menuBar()
+        self.file_menu = self.menu.addMenu("File")
+        self.file_menu.addAction(self.action_undo_changes)
+        self.file_menu.addAction(self.action_save_changes)
 
     def mainWindow_setup(self):
         self.setGeometry(200, 150, 800, 700)
@@ -140,11 +149,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.addToolBar(toolbar)
 
         # это один виджет в окне. просто меняем модели для него в процессе
-        self.table_widget = MyTableView()
-        self.table_widget.setObjectName('table_widget')
+        self.table_view_main = MyTableView()
+        self.table_view_main.setObjectName('table_widget')
+        self.table_view_main.horizontalHeader().sectionDoubleClicked.connect(self.sorting_double_clicked)
 
         # виджет для просмотра подробностей о работе или обьекте. Открывается в отдельном окне
-        self.detailed_window = DetailedTableWidget(self)
+        self.detailed_window = DetailedRentalWidget(self)
 
         self.tab_window = QtWidgets.QTabWidget()
         self.tab_window.setObjectName('tab_window')
@@ -190,7 +200,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
         splitter.addWidget(self.tab_window)
-        splitter.addWidget(self.table_widget)
+        splitter.addWidget(self.table_view_main)
         splitter.setStretchFactor(1, 1)
         splitter.setSizes([125, 150])
         main_layout.addWidget(splitter)
@@ -250,8 +260,31 @@ class MainWindow(QtWidgets.QMainWindow):
 
 # ************************************************* LOGIC *********************************************************
     def debug_versatile(self):
-        self.tab_window.currentWidget().undo_change()
-        # print('Debug is not connected now')
+        print('Debug is not connected now')
+
+    def sorting_double_clicked(self, col):
+        # todo переделать так чтобы метод сорт вызывался из класса MyTableView
+        model = self.table_view_main.model()
+        if self.table_view_main.asc_sorting_order():
+            model.sort(col, Qt.AscendingOrder)
+            self.table_view_main.change_sorting_order()
+        else:
+            model.sort(col, Qt.DescendingOrder)
+            self.table_view_main.change_sorting_order()
+
+    def undo_changes(self):
+        widget = self.tab_window.currentWidget()
+        if isinstance(widget, FindWidget):
+            self.tab_window.currentWidget().model_cache.undo_change()
+        else:
+            print('[ERROR]: Must be FindWidget')
+
+    def save_changes(self):
+        widget = self.tab_window.currentWidget()
+        if isinstance(widget, FindWidget):
+            self.tab_window.currentWidget().model_cache.save_changes()
+        else:
+            print('[ERROR]: Must be FindWidget')
 
     def get_db_table_name(self) -> str:
         """ Возвращает имя связанной таблицы для текущего виджета"""
@@ -269,7 +302,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.action_show_full_table(self.make_table_category)
 
     def checkbox_status_clicked(self):
-        # TODO переделать логику чтобы не быть привязаным к отдельной функции
+        # TODO переделать логику чтобы не быть привязанным к отдельной функции
         self.action_show_full_table(self.make_table_rentals)
 
     # 1
@@ -277,9 +310,10 @@ class MainWindow(QtWidgets.QMainWindow):
         # здесь и далее скидываем кеш, чтобы загрузить измененную таблицу из БД
         self.refresh_cache(self.get_db_table_name())
         self.action_show_full_table(self.make_table_category)
+        self.category_widget.model_cache.reset_changed_cells()
 
     def btn_edit_category_clicked(self):
-        res = self.category_widget.get_active_cell_data()
+        res = self.category_widget.model_cache.get_active_cell_data()
         print(type(res), res)
 
     def act_category_add_clicked(self):
@@ -289,9 +323,10 @@ class MainWindow(QtWidgets.QMainWindow):
     def btn_show_full_clients_clicked(self):
         self.refresh_cache(self.get_db_table_name())
         self.action_show_full_table(self.make_table_clients)
+        self.client_widget.model_cache.reset_changed_cells()
 
     def btn_edit_client_clicked(self):
-        print(f'editing: {self.client_widget.get_active_cell_data()}')
+        print(f'editing: {self.client_widget.model_cache.get_active_cell_data()}')
 
     def act_client_add_clicked(self):
         self.add_client_window.show()
@@ -300,18 +335,20 @@ class MainWindow(QtWidgets.QMainWindow):
     def btn_show_full_rental_clicked(self):
         self.refresh_cache(self.get_db_table_name())
         self.action_show_full_table(self.make_table_rentals)
+        self.rental_widget.model_cache.reset_changed_cells()
 
     def btn_edit_rental_clicked(self):
-        self.detailed_window.close() # закрываем окно если открыто чтоб не было
-        rental = self.rental_widget.get_active_cell_data() # в переменной должен быть обьект из ОРМ
+        self.detailed_window.close() # закрываем окно если открыто
+
+        rental = self.rental_widget.model_cache.get_active_orm_object() # в переменной должен быть обьект из ОРМ
         if isinstance(rental, RentalDB):
-            self.detailed_window.set_rental(rental) # здесь автоматически строиться модель
+            self.detailed_window.set_rental(rental) # здесь автоматически строится модель
             self.detailed_window.show()
         else:
             self.draw_caution_window('Спочатку оберіть подію', "Необрано подію")
 
     def btn_delete_row_clicked(self):
-        rental = self.rental_widget.get_active_cell_data()
+        rental = self.rental_widget.model_cache.get_active_cell_data()
         self.delete_rental(rental)
 
     def delete_rental(self, rental):
@@ -340,9 +377,10 @@ class MainWindow(QtWidgets.QMainWindow):
     def btn_show_full_items_clicked(self):
         self.refresh_cache(self.get_db_table_name())
         self.action_show_full_table(self.make_table_items)
+        self.item_widget.model_cache.reset_changed_cells()
 
     def btn_edit_items_clicked(self):
-        print(self.item_widget.get_active_cell_data())
+        print(self.item_widget.model_cache.get_active_cell_data())
 
     def act_item_add_clicked(self):
         self.add_item_window.show()
@@ -354,9 +392,9 @@ class MainWindow(QtWidgets.QMainWindow):
         orm_obj_list = self.db_cache.cache_dict[widget.db_table_name]
         model = self.make_model(orm_obj_list, widget.headers, table_convert_func,
                                 widget.lnedit_search)
-        widget.set_active_model(model)
+        widget.model_cache.set_active_model(model)
 
-        self.table_setup(widget.get_active_model(), widget)
+        self.table_setup(widget.model_cache.get_active_model(), widget)
 
     def refresh_cache(self, table_name:str):
         """ загружает из БД данные для нужной таблицы в кеш """
@@ -382,7 +420,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         caution_window.exec_()
 
-
     @staticmethod
     def make_model(obj_lst, headers, table_func, lnedit):
         """Make a model for proper table
@@ -396,64 +433,57 @@ class MainWindow(QtWidgets.QMainWindow):
         table = table_func(obj_lst)
         model = TableModel(table, headers)
         filter_proxy_model = QSortFilterProxyModel()
-        filter_proxy_model = QSortFilterProxyModel()
         filter_proxy_model.setSourceModel(model)
         filter_proxy_model.setFilterCaseSensitivity(Qt.CaseInsensitive)
-        filter_proxy_model.setFilterKeyColumn(model.columnCount() - 1)
+        filter_proxy_model.setFilterKeyColumn(0)
 
         lnedit.textChanged.connect(filter_proxy_model.setFilterRegExp)
         return filter_proxy_model
 
     def make_table_rentals(self, rentals: list):
         if self.rental_widget.checkbox_status.isChecked():
-            table = [[rent, rent.Client, rent.rental_date, rent.details, rent.rental_status, rent.rental_name] for rent
-                     in rentals]
+            table = [[rent.rental_name, rent.Client, rent.rental_date, rent.details, rent.rental_status,
+                      rent] for rent in rentals]
         else:
-            table = [[rent, rent.Client, rent.rental_date, rent.details, rent.rental_status, rent.rental_name] for rent
-                     in rentals if rent.rental_status]
+            table = [[rent.rental_name, rent.Client, rent.rental_date, rent.details, rent.rental_status,
+                      rent] for rent in rentals if rent.rental_status]
         return table
 
     @staticmethod
     def make_table_items(items: list):
-        table = [[item, item.Category, item.amount, item.item_name] for item in items]
+        table = [[item.item_name, item.Category, item.amount, item] for item in items]
         return table
 
     @staticmethod
     def make_table_category(cats: list):
-        table = [[cat, cat.category_name] for cat in cats]
+        table = [[cat.category_name, cat] for cat in cats]
         return table
 
     @staticmethod
     def make_table_clients(clients: list):
-        table = [[client, client.phone_number, client.email, client.client_name] for client in clients]
+        table = [[client.client_name, client.phone_number, client.email, client] for client in clients]
         return table
 
     def table_setup(self, model, widget):
-        self.table_widget.setModel(model)
-        self.table_widget.setItemDelegate(BaseDelegate())
-        self.table_widget.selectionModel().currentChanged.connect(lambda x: widget.set_active_cell_data(x.data()))
-        self.table_widget.selectionModel().currentChanged.connect(self.tab_window.currentWidget().set_active_cell_index)
-        self.table_widget.selectionModel().currentChanged.connect(self.cell_highlighted)
+        self.table_view_main.setModel(model)
+        self.table_view_main.setItemDelegate(BaseDelegate())
+        self.table_view_main.selectionModel().currentChanged.connect(lambda x: widget.model_cache.set_active_cell_data(x.data()))
+        self.table_view_main.selectionModel().currentChanged.connect(self.tab_window.currentWidget().model_cache.set_active_cell_index)
+        self.table_view_main.selectionModel().currentChanged.connect(self.cell_highlighted)
 
         # self.table_widget.selectionModel().currentChanged.connect(self.tab_window.currentWidget().add_changed_cell)
 
-        self.table_widget.horizontalHeader().setSectionResizeMode(3)
+        self.table_view_main.horizontalHeader().setSectionResizeMode(3)
         # self.table_widget.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
         filtered_column = model.columnCount()-1
-        # прячет колонку в таблице по которой фильтруется содержимое
-        self.table_widget.setFilterColumn(filtered_column)
+        self.table_view_main.setFilterColumn(filtered_column) # прячет колонку в таблице по которой фильтруется содержимое
 
     def cell_highlighted(self, current: QtCore.QModelIndex, previous:QtCore.QModelIndex):
         if previous.column() != -1:
             widget = self.tab_window.currentWidget()
-            model = self.table_widget.model()
-            widget.add_changed_cell(model.itemData(previous).get(0))
-
-
-
-
-
+            model = self.table_view_main.model()
+            widget.model_cache.add_changed_cell(model.itemData(previous).get(0))
 
 
 

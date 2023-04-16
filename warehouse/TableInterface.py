@@ -1,9 +1,11 @@
 import typing
 from datetime import date
 
+from PyQt5.QtGui import QColor
+
 from alchemy_models import Base
 
-from PyQt5.QtWidgets import QStyledItemDelegate, QTableView
+from PyQt5.QtWidgets import QStyledItemDelegate, QTableView, QAction
 from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex
 
 
@@ -25,6 +27,9 @@ class TableModel(QAbstractTableModel):
     def data(self, index: QModelIndex, role: int = ...) -> typing.Any:
         if role == Qt.DisplayRole:
             return self._data[index.row()][index.column()]
+        if role == Qt.BackgroundRole:
+            if isinstance(self._data[index.row()][index.column()], Base):
+                return QColor('#fcc603')
 
     def headerData(self, col: int, orientation: Qt.Orientation, role: int = ...) -> typing.Any:
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
@@ -44,8 +49,17 @@ class TableModel(QAbstractTableModel):
             self.dataChanged.emit(index, index)
             return True
 
+    def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
+        if not self.hasIndex(row, column, parent):
+            return QModelIndex()
+        return self.createIndex(row, column, self._data[row][column])
+
     def flags(self, index: QModelIndex) -> Qt.ItemFlags:
         return super().flags(index) | Qt.ItemIsEditable
+
+    def get_orm_object(self, row):
+        print(self._data[row])
+        return self._data[row][-1]
 
 
 class BaseDelegate(QStyledItemDelegate):
@@ -59,8 +73,8 @@ class BaseDelegate(QStyledItemDelegate):
 class MyTableView(QTableView):
     def __init__(self):
         super().__init__()
-
         self._filter_column = None
+        self._sorting_order = 0 #
 
     def setFilterColumn(self, f_column:int):
         ''' CUSTOM METHOD
@@ -82,6 +96,15 @@ class MyTableView(QTableView):
         if self._filter_column:
             self.showColumn(self._filter_column)
         self._filter_column = None
+
+    def change_sorting_order(self):
+        if self._sorting_order:
+            self._sorting_order = 0
+        else:
+            self._sorting_order = 1
+
+    def asc_sorting_order(self):
+        return self._sorting_order
 
 
 def main():

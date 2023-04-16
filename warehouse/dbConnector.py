@@ -41,9 +41,9 @@ def get_obj_single(obj: Base, parameter: int | str):
     '''
     name_parameter = obj.get_name_parameter()
     if type(parameter) == str:
-        return session.query(obj).filter(getattr(obj, f'{name_parameter}_name') == parameter).first()
+        return session.query(obj).filter_combobox(getattr(obj, f'{name_parameter}_name') == parameter).first()
     elif type(parameter) == int:
-        return session.query(obj).filter(getattr(obj, f'{name_parameter}_id') == parameter).first()
+        return session.query(obj).filter_combobox(getattr(obj, f'{name_parameter}_id') == parameter).first()
     else:
         return
 
@@ -51,9 +51,9 @@ def get_obj_single(obj: Base, parameter: int | str):
 @data_getter_deco
 def get_category_model(category: int | str):
     if type(category) == str:
-        return session.query(CategoryDB).filter(CategoryDB.category_name == category).first()
+        return session.query(CategoryDB).filter_combobox(CategoryDB.category_name == category).first()
     elif type(category) == int:
-        return session.query(CategoryDB).filter(CategoryDB.category_id == category).first()
+        return session.query(CategoryDB).filter_combobox(CategoryDB.category_id == category).first()
     else:
         return
 
