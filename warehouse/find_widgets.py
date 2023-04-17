@@ -51,6 +51,9 @@ class FindWidget(QtWidgets.QWidget):
         self.btn_add_object = QtWidgets.QPushButton(QIcon(QPixmap('static/images/add.png')), ' Add')
         self.btn_add_object.setObjectName('btn_add_object')
 
+        self.btn_save_changes = QtWidgets.QPushButton(QIcon(QPixmap('static/images/diskette.png')), ' Save')
+        self.btn_save_changes.setObjectName('btn_save_changes')
+
         self.layout_1 = QtWidgets.QHBoxLayout()
         self.layout_1.addWidget(self.lnedit_search)
 
@@ -59,6 +62,7 @@ class FindWidget(QtWidgets.QWidget):
         self.layout_2.addWidget(self.btn_edit_object)
         self.layout_2.addWidget(self.btn_delete_row)
         self.layout_2.addWidget(self.btn_add_object)
+        self.layout_2.addWidget(self.btn_save_changes)
 
         self.layout_main = QtWidgets.QVBoxLayout()
         self.layout_main.addLayout(self.layout_1)

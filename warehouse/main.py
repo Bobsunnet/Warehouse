@@ -12,7 +12,7 @@ from TableInterface import TableModel, BaseDelegate, MyTableView
 import dbConnector as db
 import add_widgets
 from find_widgets import FindWidget
-from OperationClasses import SearchCacheCategories, DbCache, ModelCache
+from OperationClasses import SearchCacheCategories, db_cache, ModelCache
 
 from constants import *
 
@@ -31,11 +31,10 @@ class DetailedRentalWidget(QWidget, SearchCacheCategories):
         self.table_model = None
         self.parent: QtWidgets.QWidget = parent
         self.rental_object: RentalDB | None = None
-        self.load_categories()
         self.model_cache = ModelCache
+        self.ui_is_setuped = False
 
         self.init_ui()
-        self.setup_ui()
 
         self.table_widget.horizontalHeader().sectionDoubleClicked.connect(self.parent.sorting_double_clicked)
 
@@ -71,6 +70,8 @@ class DetailedRentalWidget(QWidget, SearchCacheCategories):
         self.layouts['main'].addWidget(self.table_widget)
 
     def setup_ui(self):
+        self.load_categories()
+
         self.btn_reset.setText('Reset Editing')
         self.btn_reset.setObjectName('btn_reset')
 
@@ -78,8 +79,9 @@ class DetailedRentalWidget(QWidget, SearchCacheCategories):
         self.btn_save.setText('Save Editing')
 
         self.cbox_category.addItems(list(self.cats_items.keys()))
-        self.cbox_item.addItems(self.cats_items.get(self.cbox_category.currentText()))
+        self.cbox_item.addItems(self.cats_items.get(self.cbox_category.currentText(), ['None']))
         self.cbox_category.currentTextChanged.connect(self._change_search_box_items)
+        self.ui_is_setuped = True
 
     def setModel(self, model):
         # сохраняем текущую модель для таблицы
@@ -111,8 +113,11 @@ class DetailedRentalWidget(QWidget, SearchCacheCategories):
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
+        self.db_cache = db_cache # уже созданный общий кеш
+        self.db_cache.load_all_from_db()
         self.active_widget = None
 
+        self.actions_menu_setup()
         self.warehouse_widget_setup()
         self.rental_widget_setup()
         self.client_widget_setup()
@@ -120,11 +125,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.category_widget_setup()
         self.mainWindow_setup()
         self.layout_setup()
-        self.actions_menu_setup()
-
-        # %%%%%%%%%%%%%%%%%%%%%%%%% TEST %%%%%%%%%%%%%%%%%%%%%%
-        self.db_cache = DbCache()
-        self.db_cache.load_all_from_db()
 
     def actions_menu_setup(self):
         """ Подключение менюбара и действий(QAction) """
@@ -228,6 +228,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.rental_widget.btn_edit_object.clicked.connect(self.btn_edit_rental_clicked)
         self.rental_widget.btn_delete_row.clicked.connect(self.btn_delete_row_clicked)
         self.rental_widget.btn_show_full_table.clicked.connect(self.btn_show_full_rental_clicked)
+        self.rental_widget.btn_save_changes.clicked.connect(self.action_save_changes.trigger)
 
         self.add_rental_window = add_widgets.RentalAddWindow(self, 'add_rental_window','Rental')
 
@@ -237,6 +238,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.client_widget.btn_add_object.clicked.connect(self.act_client_add_clicked)
         self.client_widget.btn_edit_object.clicked.connect(self.btn_edit_client_clicked)
         self.client_widget.btn_show_full_table.clicked.connect(self.btn_show_full_clients_clicked)
+        self.client_widget.btn_save_changes.clicked.connect(self.action_save_changes.trigger)
 
         self.add_client_window = add_widgets.ClientAddWindow(self, 'add_client_window', 'Client')
 
@@ -246,6 +248,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.item_widget.btn_add_object.clicked.connect(self.act_item_add_clicked)
         self.item_widget.btn_edit_object.clicked.connect(self.btn_edit_items_clicked)
         self.item_widget.btn_show_full_table.clicked.connect(self.btn_show_full_items_clicked)
+        self.item_widget.btn_save_changes.clicked.connect(self.action_save_changes.trigger)
 
         self.add_item_window = add_widgets.ItemAddWindow(self,'add_item_window','Item')
 
@@ -255,6 +258,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.category_widget.btn_add_object.clicked.connect(self.act_category_add_clicked)
         self.category_widget.btn_edit_object.clicked.connect(self.btn_edit_category_clicked)
         self.category_widget.btn_show_full_table.clicked.connect(self.btn_show_full_category_clicked)
+        self.category_widget.btn_save_changes.clicked.connect(self.action_save_changes.trigger)
 
         self.add_category_window = add_widgets.CategoryAddWindow(self,'add_category_window','Category')
 
@@ -276,15 +280,11 @@ class MainWindow(QtWidgets.QMainWindow):
         widget = self.tab_window.currentWidget()
         if isinstance(widget, FindWidget):
             self.tab_window.currentWidget().model_cache.undo_change()
-        else:
-            print('[ERROR]: Must be FindWidget')
 
     def save_changes(self):
         widget = self.tab_window.currentWidget()
         if isinstance(widget, FindWidget):
             self.tab_window.currentWidget().model_cache.save_changes()
-        else:
-            print('[ERROR]: Must be FindWidget')
 
     def get_db_table_name(self) -> str:
         """ Возвращает имя связанной таблицы для текущего виджета"""
@@ -302,7 +302,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.action_show_full_table(self.make_table_category)
 
     def checkbox_status_clicked(self):
-        # TODO переделать логику чтобы не быть привязанным к отдельной функции
         self.action_show_full_table(self.make_table_rentals)
 
     # 1
@@ -343,6 +342,8 @@ class MainWindow(QtWidgets.QMainWindow):
         rental = self.rental_widget.model_cache.get_active_orm_object() # в переменной должен быть обьект из ОРМ
         if isinstance(rental, RentalDB):
             self.detailed_window.set_rental(rental) # здесь автоматически строится модель
+            if not self.detailed_window.ui_is_setuped:
+                self.detailed_window.setup_ui()
             self.detailed_window.show()
         else:
             self.draw_caution_window('Спочатку оберіть подію', "Необрано подію")
@@ -383,6 +384,7 @@ class MainWindow(QtWidgets.QMainWindow):
         print(self.item_widget.model_cache.get_active_cell_data())
 
     def act_item_add_clicked(self):
+        self.add_item_window.cbox_setup()
         self.add_item_window.show()
 
     # ***************************** ACTIONS **************************************

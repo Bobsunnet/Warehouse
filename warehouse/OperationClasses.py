@@ -83,23 +83,25 @@ class ModelCache:
         changes_list: dict = self._get_unique_changes()
         for index, value in changes_list.items():
             col = index.column()
-            orm_obj: ItemDB = self.get_orm_object_from_row(index.row())
+            orm_obj = self.get_orm_object_from_row(index.row())
+            saving_field = ORM_OBJ_COL_NAMES.get(self.parent.get_db_table_name())[col]
 
-            setattr(orm_obj, ORM_OBJ_COL_NAMES.get(self.parent.get_db_table_name())[col], value)
-            db.session.commit()
+            setattr(orm_obj, saving_field, value)
+        db.session.commit()
 
     def reset_changed_cells(self):
         self.changed_cells.clear()
 
 
-class SearchCacheCategories:  # todo сделать без этого класса. Через общий DbCache class
+class SearchCacheCategories:
     def __init__(self):
         self.cats_items: dict = {}  # список предметов в категории
 
     def load_categories(self):
-        cats_list = db.DataLoader(db.CategoryDB).load_all()
-        for el in cats_list:
-            self.cats_items[el.category_name] = [item.item_name for item in el.Item]
+        cats_list = db_cache['category']
+        if cats_list:
+            for el in cats_list:
+                self.cats_items[el.category_name] = [item.item_name for item in el.Item]
 
 
 class DbCache:
@@ -118,20 +120,37 @@ class DbCache:
                                    'client': db.DataLoader(db.ClientDB),
                                    'category': db.DataLoader(db.CategoryDB)}
 
+        for loader in self.data_loaders.values():
+            loader.loading_thread.data_loaded.connect(self.update_from_Thread)
+
     def load_all_from_db(self):
         """ Загружает все таблицы из базы данных """
         for name in self.db_tables_objs.keys():
-            self.cache_dict[name] = self.data_loaders.get(name).load_all()
-            print('DB Connection Used')
+            # self.cache_dict[name] = self.data_loaders.get(name).load_all()
+            self.data_loaders.get(name).load_all()
 
     def refresh_table_cache(self, table_name):
         """ Обновляет кеш для конкретной таблицы заново загружая его из БД"""
         if table_name not in self.db_tables_objs.keys():
             raise ValueError('Wrong table name')
-        self.cache_dict[table_name] = self.data_loaders[table_name].load_all()
+        self.data_loaders[table_name].load_all()
         print('DB Connection Used')
 
+    def update_from_Thread(self, data:list, name:str):
+        """ Через эту функцию поток должен закидывать в кеш_дикт загруженные значения"""
+        self.cache_dict[name] = data
+        print('updated')
+
+    def __repr__(self):
+        pass
+
+    def __getitem__(self, item):
+        return self.cache_dict.get(item, False)
+
+
+# общий для всех обьект кеша БД на который все классы могу ссылаться
+db_cache = DbCache()
 
 if __name__ == '__main__':
-    s = SearchCacheCategories()
-    s.load_categories()
+    db_cache.load_all_from_db()
+    print(db_cache[''])

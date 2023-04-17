@@ -1,47 +1,48 @@
 QPushButton {
-    background-color: #aacfa3;
+    background-color: #CBE8B8;
     border-style: outset;
     border-width: 2px;
     border-radius: 10px;
     border-color: beige;
     font: bold 14px;
-    min-width: 10em;
+    min-width: 8em;
     padding: 6px;
 }
 
 QPushButton:hover {
-    background-color: #9ac093;
+    background-color: #CDD8E6;
 }
 
 QPushButton:pressed {
-    background-color: #88b58a;
+    background-color: #90EE90;
     border-style: inset;
 }
 
-#btn_reset {
-    background-color: #f60025;
-}
 
-#btn_reset:hover {
-    background-color: #df0020;
-}
-
-#btn_reset:pressed {
-    background-color: #c80012;
-    border-style: inset;
-}
-
-#btn_delete_row {
+#btn_delete_row, #btn_reset {
     background-color: #f60025
 }
 
-#btn_delete_row:hover {
-    background-color: #e63025;
+#btn_delete_row:hover, #btn_reset:hover {
+    background-color: #EDD8E6;
 }
 
-#btn_delete_row:pressed {
+#btn_delete_row:pressed, #btn_reset:pressed {
     background-color: #c80012;
     border-style: inset;
+}
+
+
+#btn_save_changes {
+    background-color: #F1C107; /* амбер цвет */
+}
+
+#btn_save_changes:hover {
+    background-color: #FFCA48; /* светлый амбер цвет */
+}
+
+#btn_save_changes:pressed {
+    background-color: #FFA000; /* темный амбер цвет */
 }
 
 QLineEdit {

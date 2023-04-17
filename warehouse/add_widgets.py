@@ -1,10 +1,9 @@
 import sys
+from datetime import date
 
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QIntValidator
-
-from datetime import date
-
+from OperationClasses import db_cache
 import dbConnector as db
 
 
@@ -161,14 +160,6 @@ class ItemAddWindow(AddWindow):
     def widgets_setup(self):
         self.cbox_category = QtWidgets.QComboBox()
 
-        # ___________TESTING CODE___________
-        data_loader = db.DataLoader(db.CategoryDB)
-        self.objects_for_cbox = data_loader.load_all()
-        for i, el in enumerate(self.objects_for_cbox):
-            self.cbox_category.insertItem(i, el.category_name, el)
-
-        # ___________TESTING CODE___________
-
         self.lnedit_amount = QtWidgets.QLineEdit()
         self.lnedit_amount.setPlaceholderText('Enter amount')
         self.lnedit_amount.setValidator(QIntValidator())
@@ -182,6 +173,11 @@ class ItemAddWindow(AddWindow):
         self.layout_main.addLayout(self.layout_4)
 
         self.setLayout(self.layout_main)
+
+    def cbox_setup(self):
+        self.objects_for_cbox = db_cache['category']
+        for i, el in enumerate(self.objects_for_cbox):
+            self.cbox_category.insertItem(i, el.category_name, el)
 
     # _____________________________ functions _____________________________________
     def btn_save_clicked(self):
