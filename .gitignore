@@ -160,7 +160,8 @@ cython_debug/
 .idea/
 
 # ___________________________ MY IGNORES _____________________________
-test.py
+test_GUI.py
+test_funcs.py
 
 warehouse/info
 data_adder.py

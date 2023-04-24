@@ -1,6 +1,7 @@
 from typing import Any, Union
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import QModelIndex
+from binary_dump import read_from_binary, write_into_binary
 
 import dbConnector as db
 from alchemy_models import RentalDB, ItemDB
@@ -141,6 +142,18 @@ class DbCache:
         self.cache_dict[name] = data
         print('updated')
 
+    def load_from_offline(self):
+        """ Загружает из файла последнее состояние базы данных по приложению """
+        offline_cache = read_from_binary(binary_file_name)
+        if offline_cache:
+            self.cache_dict = offline_cache
+            print('Loaded from binary')
+
+    def save_to_binary_file(self):
+        """ Сохраняет в файл состояние кеша перед выходом """
+        write_into_binary(binary_file_name, self.cache_dict)
+        print('Saved to binary')
+
     def __repr__(self):
         pass
 
@@ -149,8 +162,13 @@ class DbCache:
 
 
 # общий для всех обьект кеша БД на который все классы могу ссылаться
+
+
+
 db_cache = DbCache()
+db_cache.load_from_offline() # загружает оффлайн файл последнего состояния БД
 
 if __name__ == '__main__':
-    db_cache.load_all_from_db()
-    print(db_cache[''])
+    # db_cache.load_all_from_db()
+    # print(db_cache[''])
+    pass

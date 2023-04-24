@@ -5,6 +5,7 @@ from PyQt5.QtCore import QThread, pyqtSignal
 
 from engine_session import *
 from alchemy_models import *
+from exceptionWarehouse import InvalidInputException
 
 Session = get_session()
 session = Session()
@@ -22,8 +23,8 @@ def try_commit_addition(res):
 def try_get_data_deco(func):
     def wrapper(*args, **kwargs):
         try:
-            res = func(*args, **kwargs)
-            return res
+            loaded_data = func(*args, **kwargs)
+            return loaded_data
         except Exception as ex:
             print(f'[ERROR]: {ex}')
             return
@@ -63,25 +64,25 @@ def get_object_all(obj: Base):
     return session.query(obj).all()
 
 
-def add_category(cat_name):
+def create_category(cat_name:str):
     category_add = CategoryDB(category_name=cat_name)
     res = session.add(category_add)
     try_commit_addition(res)
 
 
-def add_item(item_name, cat_id, amount=0):
+def create_item(item_name, cat_id, amount=0):
     item_add = ItemDB(item_name=item_name, amount=amount, category_id=cat_id)
     res = session.add(item_add)
     try_commit_addition(res)
 
 
-def add_client(name, phone='', email=''):
+def create_client(name, phone='', email=''):
     client_add = ClientDB(client_name=name, phone_number=phone, email=email)
     res = session.add(client_add)
     try_commit_addition(res)
 
 
-def add_rental(name, client_id=None, details='', rent_date='', rent_status=True):
+def create_rental(name, client_id=None, details='', rent_date='', rent_status=True):
     if not rent_date:
         rent_date = date.today()
     rental_add = RentalDB(rental_name=name, client_id=client_id, details=details, rental_date=rent_date,
@@ -168,7 +169,9 @@ class DataLoader:
 
 if __name__ == '__main__':
     data_l = DataLoader(ItemDB)
-    res = data_l.load_all()
-    print(res)
+    a = ItemDB()
+    print(isinstance(ItemDB, Base))
+    # res = get_object_all(ItemDB)
+    # print(isinstance(ItemDB, ItemDB))
 
 

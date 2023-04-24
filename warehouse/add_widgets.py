@@ -1,4 +1,5 @@
 import sys
+from abc import ABC
 from datetime import date
 
 from PyQt5 import QtWidgets
@@ -47,6 +48,11 @@ class AddWindow(QtWidgets.QWidget):
             widget.clear()
 
     def btn_save_clicked(self):
+        """ Забирает данные с виджетов ввода и передает дальше """
+        raise NotImplementedError('Should be redefined in subclass ')
+
+    def cbox_setup(self):
+        """ Заполняет комбобокс значениями из соответствующей таблицы кеша """
         raise NotImplementedError('Should be redefined in subclass ')
 
 
@@ -78,7 +84,7 @@ class ClientAddWindow(AddWindow):
         phone = ''.join([digit for digit in self.lnedit_phone.text().strip() if digit.isdigit()])
         email = self.lnedit_email.text().strip()
 
-        db.add_client(name, phone, email)
+        db.create_client(name, phone, email)
         print('added')
 
 
@@ -89,9 +95,9 @@ class RentalAddWindow(AddWindow):
         self.widgets_setup()
 
     def widgets_setup(self):
-        self.lnedit_client = QtWidgets.QLineEdit()
-        self.lnedit_client.setPlaceholderText('Enter client name')
-        self.widgets.append(self.lnedit_client)
+        self.cbox_client = QtWidgets.QComboBox()
+        self.cbox_client.setPlaceholderText('Enter client name')
+        self.widgets.append(self.cbox_client)
 
         self.text_description = QtWidgets.QTextEdit()
         self.text_description.setPlaceholderText('Enter Description')
@@ -104,7 +110,7 @@ class RentalAddWindow(AddWindow):
         self.rental_status.addItems(['False', 'True'])
 
         self.layout_1.addWidget(self.date_widget)
-        self.layout_2.addWidget(self.lnedit_client)
+        self.layout_2.addWidget(self.cbox_client)
         self.layout_2.addWidget(self.rental_status)
         self.layout_3.addWidget(self.text_description)
 
@@ -119,19 +125,18 @@ class RentalAddWindow(AddWindow):
     def btn_save_clicked(self):
         rent_name = self.lnedit_name.text().strip().capitalize()
         rent_date = str(self.date_widget.date().toPyDate())
-
-        client_name = self.lnedit_client.text().strip().capitalize()
-        client_id = None
-        try:
-            client_id = db.get_obj_single(client_name).client_id
-        except Exception as ex:
-            print(f'client_id [ERROR]: {ex}')
-
+        client = self.cbox_client.itemData(self.cbox_client.currentIndex())
         description = self.text_description.toPlainText().strip()
         status = bool(self.rental_status.currentIndex())
 
-        db.add_rental(rent_name,client_id,description,rent_date,status)
-        print('added')
+        res = db.create_rental(rent_name, client.client_id, description, rent_date, status)
+        print('added' if not res else res)
+
+    def cbox_setup(self):
+        self.objects_for_cbox = db_cache['client']
+        self.cbox_client.clear()
+        for i, el in enumerate(self.objects_for_cbox):
+            self.cbox_client.insertItem(i, el.client_name, el)
 
 
 class CategoryAddWindow(AddWindow):
@@ -148,7 +153,7 @@ class CategoryAddWindow(AddWindow):
     # _____________________________ functions _____________________________________
     def btn_save_clicked(self):
         name = self.lnedit_name.text().strip().capitalize()
-        db.add_category(name)
+        db.create_category(name)
         print('added')
 
 
@@ -176,8 +181,10 @@ class ItemAddWindow(AddWindow):
 
     def cbox_setup(self):
         self.objects_for_cbox = db_cache['category']
+        self.cbox_category.clear()
         for i, el in enumerate(self.objects_for_cbox):
             self.cbox_category.insertItem(i, el.category_name, el)
+            print(i, el.category_name, el)
 
     # _____________________________ functions _____________________________________
     def btn_save_clicked(self):
@@ -185,7 +192,7 @@ class ItemAddWindow(AddWindow):
         cat_item = self.cbox_category.itemData(self.cbox_category.currentIndex())
         amount = int(self.lnedit_amount.text().strip())
 
-        db.add_item(name, cat_item.category_id,amount)
+        db.create_item(name, cat_item.category_id, amount)
         print('added')
 
 

@@ -9,3 +9,7 @@ HEADERS_CLIENTS = ['Name', 'Phone', 'Email', '_filter']
 HEADERS_CATS = ['Category', '_filter']
 HEADERS_RENTALS = ['Event/Rent', 'Client', 'Date', 'Descr', 'Status', '_filter']
 HEADERS_ITEMS = ['Item', 'Category', 'Amount', '_filter']
+
+READING_ERROR_NAME = '[Reading file Error]'
+WRITING_ERROR_NAME = '[Writing file Error]'
+binary_file_name = 'binary_cache.pickle'

@@ -7,6 +7,7 @@ from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QSize, QSortFilterProxyModel, Qt
 from PyQt5.QtGui import QIcon, QKeySequence
 
+
 from alchemy_models import RentalDB
 from TableInterface import TableModel, BaseDelegate, MyTableView
 import dbConnector as db
@@ -37,6 +38,7 @@ class DetailedRentalWidget(QWidget, SearchCacheCategories):
         self.init_ui()
 
         self.table_widget.horizontalHeader().sectionDoubleClicked.connect(self.parent.sorting_double_clicked)
+
 
     def init_ui(self):
         self.setMinimumSize(600,480)
@@ -262,6 +264,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.add_category_window = add_widgets.CategoryAddWindow(self,'add_category_window','Category')
 
+    def closeEvent(self, event) -> None:
+        print('Saving dump binary file')
+        self.db_cache.save_to_binary_file()
+        event.accept()
+
 # ************************************************* LOGIC *********************************************************
     def debug_versatile(self):
         print('Debug is not connected now')
@@ -309,7 +316,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # здесь и далее скидываем кеш, чтобы загрузить измененную таблицу из БД
         self.refresh_cache(self.get_db_table_name())
         self.action_show_full_table(self.make_table_category)
-        self.category_widget.model_cache.reset_changed_cells()
+        self.category_widget.model_cache.reset_changed_cells() # сбрасывает стек несохраненных изменений таблицы
 
     def btn_edit_category_clicked(self):
         res = self.category_widget.model_cache.get_active_cell_data()
@@ -349,16 +356,19 @@ class MainWindow(QtWidgets.QMainWindow):
             self.draw_caution_window('Спочатку оберіть подію', "Необрано подію")
 
     def btn_delete_row_clicked(self):
-        rental = self.rental_widget.model_cache.get_active_cell_data()
-        self.delete_rental(rental)
+        rental = self.rental_widget.model_cache.get_active_orm_object()
+        deletion_res = self.delete_rental(rental)
 
-    def delete_rental(self, rental):
+
+    def delete_rental(self, rental) -> bool | None:
+        """ Возвращает True если удаление выполнилось иначе None"""
         if isinstance(rental, RentalDB):
             try:
                 db.session.delete(rental)
                 db.session.commit()
                 self.refresh_cache('rental')
                 self.action_show_full_table(self.make_table_rentals)
+                return True
 
             except psyc_ex.IntegrityError as FK_violation_ex:
                 db.session.rollback()
@@ -371,7 +381,9 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.draw_caution_window('Видаляти можна тільки рядок', 'Помилка видалення')
 
+
     def act_rental_add_clicked(self):
+        self.add_rental_window.cbox_setup()
         self.add_rental_window.show()
 
     # 4
@@ -403,6 +415,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.db_cache.refresh_table_cache(table_name)
 
     def refresh_cache_all(self):
+        """ обновляет все данные кеша БД """
         self.db_cache.load_all_from_db()
 
     # *************************** FUNCTIONS **************************************
